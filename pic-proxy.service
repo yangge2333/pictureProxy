@@ -1,0 +1,15 @@
+[Unit]
+Description=pic-proxy
+After=network.target
+
+[Service]
+Type=simple
+User=root
+PIDFile=/var/run/pic-proxy.pid
+ExecStart=/usr/bin/pic-proxy
+ExecStop=/bin/kill -WINCH ${MAINPID}
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
