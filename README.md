@@ -26,4 +26,4 @@ localhost:8199/picture/r18 随机r18涩图
 
 在项目路径下执行 make install
 
-跟新执行 make update
+更新执行 make update
