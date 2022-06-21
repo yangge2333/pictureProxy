@@ -32,10 +32,12 @@ type PictureMap struct {
 
 var GlobalR18PictureMap *PictureMap
 var GlobalPictureMap *PictureMap
+var GlobalSnbPictureMap *PictureMap
 
 func init() {
 	r18PicChan := make(chan int, 10)
 	picChan := make(chan int, 10)
+	snbChan := make(chan int, 10)
 	GlobalR18PictureMap = &PictureMap{
 		picMap: &sync.Map{},
 		getPic: &r18PicChan,
@@ -44,14 +46,19 @@ func init() {
 		picMap: &sync.Map{},
 		getPic: &picChan,
 	}
+	GlobalSnbPictureMap = &PictureMap{
+		picMap: &sync.Map{},
+		getPic: &snbChan,
+	}
 	go GlobalR18PictureMap.AddR18Picture()
 	go GlobalPictureMap.AddPicture()
+	go GlobalSnbPictureMap.AddSnbPicture()
 }
 
 func (m *PictureMap) AddR18Picture() {
 	for {
 		*m.getPic <- 1
-		rsp := loliconApi(1)
+		rsp := loliconApi(`{"r18" :1}`)
 		if rsp == nil && len(rsp.Data) != 0 {
 			return
 		}
@@ -62,7 +69,18 @@ func (m *PictureMap) AddR18Picture() {
 func (m *PictureMap) AddPicture() {
 	for {
 		*m.getPic <- 1
-		rsp := loliconApi(0)
+		rsp := loliconApi(`{"r18" :0}`)
+		if rsp == nil && len(rsp.Data) != 0 {
+			return
+		}
+		m.picMap.Store(rsp.Data[0].Urls.Original, getPicFromUrl(rsp.Data[0].Urls.Original))
+	}
+}
+
+func (m *PictureMap) AddSnbPicture() {
+	for {
+		*m.getPic <- 1
+		rsp := loliconApi(`{"tag": ["久岐忍"]}`)
 		if rsp == nil && len(rsp.Data) != 0 {
 			return
 		}
@@ -91,14 +109,16 @@ func (*helloApi) Normal(r *ghttp.Request) {
 	r.Response.WriteExit(GlobalPictureMap.GetPicture())
 }
 
-func loliconApi(r18 int) *loliconRsp {
+func (*helloApi) KukiShinobu(r *ghttp.Request) {
+	r.Response.WriteExit(GlobalSnbPictureMap.GetPicture())
+}
+
+func loliconApi(params string) *loliconRsp {
 	url := "https://api.lolicon.app/setu/v2"
 	method := "POST"
 
-	payload := strings.NewReader(`{"r18" :0}`)
-	if r18 != 0 {
-		payload = strings.NewReader(`{"r18" :1}`)
-	}
+	payload := strings.NewReader(params)
+
 	client := &http.Client{}
 	req, err := http.NewRequest(method, url, payload)
 
